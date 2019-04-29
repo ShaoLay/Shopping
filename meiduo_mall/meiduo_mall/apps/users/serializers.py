@@ -70,34 +70,9 @@ class CreateUserSerializer(serializers.ModelSerializer):
         del validated_data['sms_code']
         del validated_data['allow']
 
-        # user = User.objects.create(username=xxx, password=xx)
-        # user = User.objects.create(**validated_data)
-
         user = super().create(validated_data)
 
         user.set_password(validated_data['password'])
         user.save()
 
         return user
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
