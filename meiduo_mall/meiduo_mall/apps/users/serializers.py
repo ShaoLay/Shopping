@@ -16,7 +16,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'password', 'password2', 'sms_code', 'mobile', 'allow')
+        fields = ('id', 'username', 'password', 'password2', 'sms_code', 'mobile', 'allow', 'token')
         extra_kwargs = {
             'username': {
                 'min_length': 5,
@@ -72,6 +72,9 @@ class CreateUserSerializer(serializers.ModelSerializer):
         del validated_data['password2']
         del validated_data['sms_code']
         del validated_data['allow']
+
+        # user = User.objects.create(username=xxx, password=xx)
+        # user = User.objects.create(**validated_data)
 
         user = super().create(validated_data)
 
