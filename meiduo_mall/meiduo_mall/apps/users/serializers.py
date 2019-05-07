@@ -1,10 +1,10 @@
 from django_redis import get_redis_connection
 from rest_framework import serializers
 import re
-
 from rest_framework_jwt.settings import api_settings
 
 from .models import User
+from celery_tasks.email.tasks import send_active_email
 
 
 class CreateUserSerializer(serializers.ModelSerializer):
@@ -16,7 +16,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'password', 'password2', 'sms_code', 'mobile', 'allow')
+        fields = ('id', 'username', 'password', 'password2', 'sms_code', 'mobile', 'allow', 'token')
         extra_kwargs = {
             'username': {
                 'min_length': 5,
@@ -73,6 +73,9 @@ class CreateUserSerializer(serializers.ModelSerializer):
         del validated_data['sms_code']
         del validated_data['allow']
 
+        # user = User.objects.create(username=xxx, password=xx)
+        # user = User.objects.create(**validated_data)
+
         user = super().create(validated_data)
 
         user.set_password(validated_data['password'])
@@ -88,3 +91,38 @@ class CreateUserSerializer(serializers.ModelSerializer):
         user.token = token
 
         return user
+
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    """
+    用户详细信息序列化器
+    """
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'mobile', 'email', 'email_active')
+
+class EmailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'email')
+
+    def update(self, instance, validated_data):
+        """
+
+        :param instance:  视图传过来的user对象
+        :param validated_data:
+        :return:
+        """
+
+        email = validated_data['email']
+
+        instance.email = email
+        instance.save()
+
+        # 生成激活链接
+        url = instance.generate_verify_email_url()
+
+        # 发送邮件
+        send_active_email.delay(email, url)
+
+        return instance
