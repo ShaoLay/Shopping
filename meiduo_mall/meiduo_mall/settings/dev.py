@@ -71,7 +71,7 @@ ROOT_URLCONF = 'meiduo_mall.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -249,7 +249,7 @@ CORS_ALLOW_CREDENTIALS = True
 # QQ登录
 QQ_CLIENT_ID = '101474184'
 QQ_REDIRECT_URI = 'http://www.meiduo.site:8080/oauth_callback.html'
-QQ_STATE = '/index.html'
+QQ_STATE = '/index_origin.html'
 QQ_CLIENT_SECRET = 'c6ce949e04e12ecc909ae6a8b09b637c'
 
 
@@ -287,5 +287,8 @@ CKEDITOR_CONFIGS = {
     },
 }
 CKEDITOR_UPLOAD_PATH = ''  # 上传图片保存路径，使用了FastDFS，所以此处设为''
+
+# 页面静态化保存文件的目录
+GENERATED_STATIC_HTML_FILES_DIR = os.path.join(os.path.dirname(os.path.dirname(BASE_DIR)), 'front_end_pc')
 
 
