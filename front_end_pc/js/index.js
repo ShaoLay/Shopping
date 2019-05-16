@@ -1,5 +1,6 @@
 var vm = new Vue({
     el: '#app',
+    // 声明Vue使用的模板变量语法
     delimiters: ['[[', ']]'],
     data: {
         host,
