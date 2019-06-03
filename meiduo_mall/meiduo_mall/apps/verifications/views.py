@@ -35,7 +35,6 @@ class ImageCodeView(APIView):
         return HttpResponse(image, content_type='image/jpg')
 
 
-# url('^sms_codes/(?P<mobile>1[3-9]\d{9})/$', views.SMSCodeView.as_view()),
 class SMSCodeView(GenericAPIView):
     """
     短信验证码
