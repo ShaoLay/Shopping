@@ -27,11 +27,10 @@ class ImageCodeView(APIView):
         # 生成验证码图片
         text, image = captcha.generate_captcha()
 
-        # 保存真实值
+        # 保存真实值到Redis数据库
         redis_conn = get_redis_connection('verify_codes')
         redis_conn.setex("img_%s" % image_code_id, constants.IMAGE_CODE_REDIS_EXPIRES, text)
 
-        # 返回图片
         return HttpResponse(image, content_type='image/jpg')
 
 
