@@ -52,8 +52,6 @@ class SMSCodeView(GenericAPIView):
 
         # 保存短信验证码  保存发送记录
         redis_conn = get_redis_connection('verify_codes')
-        # redis_conn.setex("sms_%s" % mobile, constants.SMS_CODE_REDIS_EXPIRES, sms_code)
-        # redis_conn.setex("send_flag_%s" % mobile, constants.SEND_SMS_CODE_INTERVAL, 1)
 
         # redis管道
         pl = redis_conn.pipeline()
@@ -62,22 +60,6 @@ class SMSCodeView(GenericAPIView):
 
         # 让管道通知redis执行命令
         pl.execute()
-
-        # # 发送短信
-        # try:
-        #     ccp = CCP()
-        #     expires = constants.SMS_CODE_REDIS_EXPIRES // 60
-        #     result = ccp.send_template_sms(mobile, [sms_code, expires], constants.SMS_CODE_TEMP_ID)
-        # except Exception as e:
-        #     logger.error("发送验证码短信[异常][ mobile: %s, message: %s ]" % (mobile, e))
-        #     return Response({'message': 'failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        # else:
-        #     if result == 0:
-        #         logger.info("发送验证码短信[正常][ mobile: %s ]" % mobile)
-        #         return Response({'message': 'OK'})
-        #     else:
-        #         logger.warning("发送验证码短信[失败][ mobile: %s ]" % mobile)
-        #         return Response({'message': 'failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # 使用celery发送短信验证码
         expires = constants.SMS_CODE_REDIS_EXPIRES // 60
