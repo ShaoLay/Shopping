@@ -8,7 +8,7 @@ import base64
 
 from carts import constants
 from goods.models import SKU
-from .serializers import CartSerializer, CartSKUSerializer, CartDeleteSerializer
+from .serializers import CartSerializer, CartSKUSerializer, CartDeleteSerializer, CartSelectAllSerializer
 
 
 # Create your views here.
@@ -290,11 +290,6 @@ class CartSelectAllView(GenericAPIView):
             # 已登录，redis
             redis_conn = get_redis_connection('cart')
             redis_cart = redis_conn.hgetall('cart_%s' % user.id)
-            # redis_cart = {
-            #     商品的sku_id  bytes字节类型: 数量  bytes字节类型
-            #     商品的sku_id  bytes字节类型: 数量  bytes字节类型
-            #    ...
-            # }
 
             sku_id_list = redis_cart.keys()
             if selected:
