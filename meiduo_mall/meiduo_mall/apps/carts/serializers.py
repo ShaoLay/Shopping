@@ -22,4 +22,19 @@ class CartSerializer(serializers.Serializer):
 
         return data
 
+    class Meta:
+        model = SKU
+        fields = ('id', 'count', 'name', 'default_image_url', 'price', 'selected')
+
+class CartSKUSerializer(serializers.ModelSerializer):
+    """
+    购物车商品数据序列化器
+    """
+    count = serializers.IntegerField(label='数量')
+    selected = serializers.BooleanField(label='是否勾选')
+
+    class Meta:
+        model = SKU
+        fields = ('id', 'count', 'name', 'default_image_url', 'price', 'selected')
+
 

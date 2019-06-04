@@ -6,7 +6,10 @@ import pickle
 import base64
 
 from carts import contants
-from .serializers import CartSerializer
+from goods.models import SKU
+from .serializers import CartSerializer, CartSKUSerializer
+
+
 # Create your views here.
 
 
@@ -96,6 +99,58 @@ class CartView(GenericAPIView):
             response.set_cookie('cart', cart_cookie, max_age=contants.CART_COOKIE_EXPIRES)
 
             return response
+
+    def get(self, request):
+        """
+        获取购物车
+        :param request:
+        :return:
+        """
+        try:
+            user = request.user
+        except Exception:
+            user = None
+
+        if user is not None and user.is_authenticated:
+            # 用户已登录, 从redis中获取
+            redis_conn = get_redis_connection('cart')
+            redis_cart = redis_conn.hgetall('cart_%s' % user.id)
+            redis_cart_selected = redis_conn.smembers('cart_selected_%s' % user.id)
+
+            # 遍历redid_cart, 形成cart_dict
+            cart_dict = {}
+            for sku_id, count in redis_cart.items():
+                cart_dict[int(sku_id)] = {
+                    'count': int(count),
+                    'selected': sku_id in redis_cart_selected
+                }
+        else:
+            # 如果用户未登录, 从cookie中查询
+            cookie_cart = request.COOKIES.get('cart')
+
+            if cookie_cart:
+                # 表示cookie中有购物车数据
+                # 解析
+                cart_dict = pickle.loads(base64.b64decode(cookie_cart.encode()))
+            else:
+                # 表示cookie中没有购物车数据
+                cart_dict = {}
+
+        # 查询数据库
+        sku_id_list = cart_dict.keys()
+        sku_obj_list = SKU.objects.filter(id__in=sku_id_list)
+
+        # 遍历sku_obj_list 向sku对象中添加count和selected属性
+        for sku in sku_obj_list:
+            sku.count = cart_dict[sku.id]['count']
+            sku.selected = cart_dict[sku.id]['selected']
+
+        # 序列化返回
+        serializer = CartSKUSerializer(sku_obj_list, many=True)
+        return Response(serializer.data)
+
+
+
 
 
 
