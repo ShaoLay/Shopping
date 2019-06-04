@@ -264,6 +264,71 @@ class CartView(GenericAPIView):
 
             return response
 
+class CartSelectAllView(GenericAPIView):
+    """
+    购物车全选
+    """
+    serializer_class = CartSelectAllSerializer
+
+    def perform_authentication(self, request):
+        pass
+
+    def put(self, request):
+        # selected
+        # 校验
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        selected = serializer.validated_data['selected']
+
+        # 判断用户的登录状态
+        try:
+            user = request.user
+        except Exception:
+            user = None
+
+        if user and user.is_authenticated:
+            # 已登录，redis
+            redis_conn = get_redis_connection('cart')
+            redis_cart = redis_conn.hgetall('cart_%s' % user.id)
+            # redis_cart = {
+            #     商品的sku_id  bytes字节类型: 数量  bytes字节类型
+            #     商品的sku_id  bytes字节类型: 数量  bytes字节类型
+            #    ...
+            # }
+
+            sku_id_list = redis_cart.keys()
+            if selected:
+                # 全选， 所有的sku_id都添加到redis set
+                redis_conn.sadd('cart_selected_%s' % user.id, *sku_id_list)
+            else:
+                # 取消全选，清空redis中的set数据
+                redis_conn.srem('cart_selected_%s' % user.id, *sku_id_list)
+
+            return Response({'message': 'OK'})
+        else:
+            # 未登录， cookie
+            cookie_cart = request.COOKIES.get('cart')
+
+            if cookie_cart:
+                # 表示cookie中有购物车数据
+                # 解析
+                cart_dict = pickle.loads(base64.b64decode(cookie_cart.encode()))
+            else:
+                # 表示cookie中没有购物车数据
+                cart_dict = {}
+
+            response = Response({'message': 'OK'})
+
+            if cart_dict:
+                for count_selected_dict in cart_dict.values():
+                     count_selected_dict['selected'] = selected
+
+                cart_cookie = base64.b64encode(pickle.dumps(cart_dict)).decode()
+
+                # 设置cookie
+                response.set_cookie('cart', cart_cookie, max_age=constants.CART_COOKIE_EXPIRES)
+
+            return response
 
 
 
