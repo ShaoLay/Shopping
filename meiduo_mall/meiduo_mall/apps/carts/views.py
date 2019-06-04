@@ -1,13 +1,14 @@
 from django.shortcuts import render
 from django_redis import get_redis_connection
+from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 import pickle
 import base64
 
-from carts import contants
+from carts import constants
 from goods.models import SKU
-from .serializers import CartSerializer, CartSKUSerializer
+from .serializers import CartSerializer, CartSKUSerializer, CartDeleteSerializer
 
 
 # Create your views here.
@@ -96,7 +97,7 @@ class CartView(GenericAPIView):
 
             # 设置cookie
             response = Response(serializer.data)
-            response.set_cookie('cart', cart_cookie, max_age=contants.CART_COOKIE_EXPIRES)
+            response.set_cookie('cart', cart_cookie, max_age=constants.CART_COOKIE_EXPIRES)
 
             return response
 
@@ -215,7 +216,53 @@ class CartView(GenericAPIView):
                 response.set_cookie('cart', cart_cookie, max_age=constants.CART_COOKIE_EXPIRES)
 
             return response
+    def delete(self, request):
+        """删除购物车"""
+        # sku_id
+        # 校验
+        serializer = CartDeleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        sku_id = serializer.validated_data['sku_id']
 
+        # 判断用户的登录状态
+        try:
+            user = request.user
+        except Exception:
+            user = None
+
+        # 删除
+        if user and user.is_authenticated:
+            # 已登录，删除redis
+            redis_conn = get_redis_connection('cart')
+            pl = redis_conn.pipeline()
+            # 删除hash
+            pl.hdel('cart_%s' % user.id, sku_id)
+            # 删除set
+            pl.srem('cart_selected_%s' % user.id, sku_id)
+            pl.execute()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            # 未登录，删除cookie
+            cookie_cart = request.COOKIES.get('cart')
+
+            if cookie_cart:
+                # 表示cookie中有购物车数据
+                # 解析
+                cart_dict = pickle.loads(base64.b64decode(cookie_cart.encode()))
+            else:
+                # 表示cookie中没有购物车数据
+                cart_dict = {}
+
+            response = Response(status=status.HTTP_204_NO_CONTENT)
+            if sku_id in cart_dict:
+                del cart_dict[sku_id]
+
+                cart_cookie = base64.b64encode(pickle.dumps(cart_dict)).decode()
+
+                # 设置cookie
+                response.set_cookie('cart', cart_cookie, max_age=constants.CART_COOKIE_EXPIRES)
+
+            return response
 
 
 
