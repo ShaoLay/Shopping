@@ -6,11 +6,9 @@ from rest_framework.response import Response
 import pickle
 import base64
 
-from carts import constants
-from goods.models import SKU
+from . import constants
 from .serializers import CartSerializer, CartSKUSerializer, CartDeleteSerializer, CartSelectAllSerializer
-
-
+from goods.models import SKU
 # Create your views here.
 
 
@@ -23,10 +21,11 @@ class CartView(GenericAPIView):
         pass
 
     def post(self, request):
+        """保存购物车"""
         # sku_id  count  selected
         # 校验
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_excption=True)
+        serializer.is_valid(raise_exception=True)
 
         sku_id = serializer.validated_data['sku_id']
         count = serializer.validated_data['count']
@@ -102,23 +101,27 @@ class CartView(GenericAPIView):
             return response
 
     def get(self, request):
-        """
-        获取购物车
-        :param request:
-        :return:
-        """
+        """查询购物车"""
+        # 判断用户登录状态
         try:
             user = request.user
         except Exception:
             user = None
 
-        if user is not None and user.is_authenticated:
-            # 用户已登录, 从redis中获取
+        # 查询
+        if user and user.is_authenticated:
+            # 如果用户已登录，从redis中查询  sku_id  count selected
             redis_conn = get_redis_connection('cart')
             redis_cart = redis_conn.hgetall('cart_%s' % user.id)
+            # redis_cart = {
+            #     商品的sku_id  bytes字节类型: 数量  bytes字节类型
+            #     商品的sku_id  bytes字节类型: 数量  bytes字节类型
+            #    ...
+            # }
             redis_cart_selected = redis_conn.smembers('cart_selected_%s' % user.id)
+            # redis_cart_selected = set(勾选的商品sku_id bytes字节类型, ....)
 
-            # 遍历redid_cart, 形成cart_dict
+            # 遍历 redis_cart，形成cart_dict
             cart_dict = {}
             for sku_id, count in redis_cart.items():
                 cart_dict[int(sku_id)] = {
@@ -126,7 +129,7 @@ class CartView(GenericAPIView):
                     'selected': sku_id in redis_cart_selected
                 }
         else:
-            # 如果用户未登录, 从cookie中查询
+            # 如果用户未登录，从cookie中查询
             cookie_cart = request.COOKIES.get('cart')
 
             if cookie_cart:
@@ -136,6 +139,17 @@ class CartView(GenericAPIView):
             else:
                 # 表示cookie中没有购物车数据
                 cart_dict = {}
+
+        # cart_dict = {
+        #     sku_id_1: {
+        #         'count': 10
+        #         'selected': True
+        #     },
+        #     sku_id_2: {
+        #         'count': 10
+        #         'selected': False
+        #     },
+        # }
 
         # 查询数据库
         sku_id_list = cart_dict.keys()
@@ -151,11 +165,8 @@ class CartView(GenericAPIView):
         return Response(serializer.data)
 
     def put(self, request):
-        """
-        修改购物车
-        :param request:
-        :return:
-        """
+        """修改购物车"""
+        # sku_id, count, selected
         # 校验
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -172,11 +183,11 @@ class CartView(GenericAPIView):
 
         # 保存
         if user and user.is_authenticated:
-            # 如果用户已登录, 修改redis
+            # 如果用户已登录，修改redis
             redis_conn = get_redis_connection('cart')
             pl = redis_conn.pipeline()
 
-            # 处理数量hash
+            # 处理数量 hash
             pl.hset('cart_%s' % user.id, sku_id, count)
 
             # 处理勾选状态 set
@@ -201,6 +212,16 @@ class CartView(GenericAPIView):
             else:
                 # 表示cookie中没有购物车数据
                 cart_dict = {}
+            # cart_dict = {
+            #     sku_id_1: {
+            #         'count': 10
+            #         'selected': True
+            #     },
+            #     sku_id_2: {
+            #         'count': 10
+            #         'selected': False
+            #     },
+            # }
 
             response = Response(serializer.data)
 
@@ -216,6 +237,7 @@ class CartView(GenericAPIView):
                 response.set_cookie('cart', cart_cookie, max_age=constants.CART_COOKIE_EXPIRES)
 
             return response
+
     def delete(self, request):
         """删除购物车"""
         # sku_id
@@ -252,7 +274,16 @@ class CartView(GenericAPIView):
             else:
                 # 表示cookie中没有购物车数据
                 cart_dict = {}
-
+            # cart_dict = {
+            #     sku_id_1: {
+            #         'count': 10
+            #         'selected': True
+            #     },
+            #     sku_id_2: {
+            #         'count': 10
+            #         'selected': False
+            #     },
+            # }
             response = Response(status=status.HTTP_204_NO_CONTENT)
             if sku_id in cart_dict:
                 del cart_dict[sku_id]
@@ -263,6 +294,7 @@ class CartView(GenericAPIView):
                 response.set_cookie('cart', cart_cookie, max_age=constants.CART_COOKIE_EXPIRES)
 
             return response
+
 
 class CartSelectAllView(GenericAPIView):
     """
@@ -290,6 +322,11 @@ class CartSelectAllView(GenericAPIView):
             # 已登录，redis
             redis_conn = get_redis_connection('cart')
             redis_cart = redis_conn.hgetall('cart_%s' % user.id)
+            # redis_cart = {
+            #     商品的sku_id  bytes字节类型: 数量  bytes字节类型
+            #     商品的sku_id  bytes字节类型: 数量  bytes字节类型
+            #    ...
+            # }
 
             sku_id_list = redis_cart.keys()
             if selected:
@@ -311,6 +348,16 @@ class CartSelectAllView(GenericAPIView):
             else:
                 # 表示cookie中没有购物车数据
                 cart_dict = {}
+            # cart_dict = {
+            #     sku_id_1: {
+            #         'count': 10
+            #         'selected': True
+            #     },
+            #     sku_id_2: {
+            #         'count': 10
+            #         'selected': False
+            #     },
+            # }
 
             response = Response({'message': 'OK'})
 
@@ -324,13 +371,6 @@ class CartSelectAllView(GenericAPIView):
                 response.set_cookie('cart', cart_cookie, max_age=constants.CART_COOKIE_EXPIRES)
 
             return response
-
-
-
-
-
-
-
 
 
 

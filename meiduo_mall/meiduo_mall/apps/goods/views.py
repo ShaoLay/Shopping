@@ -1,14 +1,14 @@
 from django.shortcuts import render
-
-# Create your views here.
 from drf_haystack.viewsets import HaystackViewSet
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import ListAPIView
 
-from goods.models import SKU
-from goods.serializers import SKUSerializer
+from .serializers import SKUSerializer, SKUIndexSerializer
+from .models import SKU
+# Create your views here.
 
 
+# /categories/(?P<category_id>\d+)/skus?page=xxx&page_size=xxx&ordering=xxx
 class SKUListView(ListAPIView):
     """
     商品列表视图
@@ -25,6 +25,7 @@ class SKUListView(ListAPIView):
     def get_queryset(self):
         category_id = self.kwargs['category_id']
         return SKU.objects.filter(category_id=category_id, is_launched=True)
+
 
 class SKUSearchViewSet(HaystackViewSet):
     """

@@ -22,9 +22,6 @@ class CartSerializer(serializers.Serializer):
 
         return data
 
-    class Meta:
-        model = SKU
-        fields = ('id', 'count', 'name', 'default_image_url', 'price', 'selected')
 
 class CartSKUSerializer(serializers.ModelSerializer):
     """
@@ -36,6 +33,7 @@ class CartSKUSerializer(serializers.ModelSerializer):
     class Meta:
         model = SKU
         fields = ('id', 'count', 'name', 'default_image_url', 'price', 'selected')
+
 
 class CartDeleteSerializer(serializers.Serializer):
     """
@@ -51,10 +49,9 @@ class CartDeleteSerializer(serializers.Serializer):
 
         return value
 
+
 class CartSelectAllSerializer(serializers.Serializer):
     """
     购物车全选
     """
     selected = serializers.BooleanField(label='全选')
-
-
