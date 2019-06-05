@@ -136,7 +136,7 @@ CACHES = {
         },
     "cart": {
             "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": "redis://10.211.55.5:6379/4",
+            "LOCATION": "redis://127.0.0.1:6379/4",
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
             }
